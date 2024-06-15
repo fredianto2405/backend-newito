@@ -33,7 +33,7 @@ public class SystemController {
                     description = "Bad Request",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @GetMapping(value = "/api/system/ping")
+    @GetMapping(value = "/system/ping")
     @CrossOrigin(value = "*")
     public ResponseEntity<?> ping(Authentication auth) {
         log.info("Hello you're login as {}", auth.getName());

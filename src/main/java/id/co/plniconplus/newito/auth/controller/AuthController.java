@@ -2,6 +2,7 @@ package id.co.plniconplus.newito.auth.controller;
 
 import id.co.plniconplus.newito.auth.dto.LoginRequest;
 import id.co.plniconplus.newito.auth.dto.LoginResponse;
+import id.co.plniconplus.newito.auth.dto.RefreshTokenRequest;
 import id.co.plniconplus.newito.exception.dto.ErrorResponse;
 import id.co.plniconplus.newito.security.jwt.JwtTokenUtil;
 import id.co.plniconplus.newito.security.service.CustomUserDetailsService;
@@ -29,7 +30,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@Tag(name = "Login", description = "Login Controller")
+@Tag(name = "Authentication", description = "Auth Controller")
 public class AuthController {
     private final JwtTokenUtil jwtTokenUtil;
 
@@ -39,7 +40,7 @@ public class AuthController {
 
     private final CustomUserDetailsService customUserDetailsService;
 
-    @Operation(summary = "Login")
+    @Operation(summary = "Authenticate")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200",
                     description = "Success",
@@ -74,5 +75,30 @@ public class AuthController {
                         .data(data)
                         .build()
         );
+    }
+
+    @Operation(summary = "Refresh Token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Success",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginResponse.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Bad Request",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping(value = "/auth/refresh-token")
+    @CrossOrigin(value = "*")
+    public LoginResponse refreshToken(@RequestBody RefreshTokenRequest request) {
+        sessionService.verifyToken(request.getToken());
+        UserSessionDto userSession = sessionService.updateExpiryDate(request.getToken());
+        String accessToken = jwtTokenUtil.generateAccessToken(userSession);
+
+        log.info("Refresh token successful: {}", request.getToken());
+        return LoginResponse.builder()
+                .success(true)
+                .message("success")
+                .token(request.getToken())
+                .accessToken(accessToken)
+                .build();
     }
 }

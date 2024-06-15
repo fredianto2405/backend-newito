@@ -1,5 +1,6 @@
 package id.co.plniconplus.newito.session.service;
 
+import id.co.plniconplus.newito.user.dto.UserSessionDto;
 import id.co.plniconplus.newito.utils.Parameters;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,9 +48,73 @@ public class SessionService {
         }
     }
 
+    public void verifyToken(String token) {
+        try {
+            Connection connection = jdbcTemplate.getDataSource().getConnection();
+            String sql = "{? = call newito.bo_verify_token(?)}";
+            CallableStatement callableStatement = connection.prepareCall(sql);
+
+            callableStatement.registerOutParameter(1, Types.VARCHAR);
+            callableStatement.setString(2, token);
+            callableStatement.execute();
+            String result = callableStatement.getString(1);
+
+            callableStatement.close();
+            connection.close();
+
+            String[] resultArray = result.split("##");
+            String callback = resultArray[0];
+            String message = resultArray[1];
+
+            if (callback.equals("-1")) {
+                throw new RuntimeException(message);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    public UserSessionDto updateExpiryDate(String token) {
+        try {
+            Instant expiryDate = Instant.now().plusMillis(Parameters.JWT_EXPIRE_DURATION + 60000);
+
+            Connection connection = jdbcTemplate.getDataSource().getConnection();
+            String sql = "{? = call newito.bo_update_expiry_date(?, ?)}";
+            CallableStatement callableStatement = connection.prepareCall(sql);
+
+            callableStatement.registerOutParameter(1, Types.VARCHAR);
+            callableStatement.setString(2, token);
+            callableStatement.setString(3, convertExpiryDateToDateString(expiryDate));
+            callableStatement.execute();
+            String result = callableStatement.getString(1);
+
+            callableStatement.close();
+            connection.close();
+
+            return convertResultToUserSessionDto(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
     private String convertExpiryDateToDateString(Instant expiryDate) {
         LocalDateTime localDateTime = LocalDateTime.ofInstant(expiryDate, ZoneId.systemDefault());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         return localDateTime.format(formatter);
+    }
+
+    private UserSessionDto convertResultToUserSessionDto(String result) {
+        String[] resultArray = result.split("#");
+        String username = resultArray[0];
+        String password = resultArray[1];
+        String nama = resultArray[2];
+
+        return UserSessionDto.builder()
+                .username(username)
+                .password(password)
+                .nama(nama)
+                .build();
     }
 }
