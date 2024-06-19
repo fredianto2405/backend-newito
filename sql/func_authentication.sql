@@ -28,6 +28,8 @@ $function$
 
 -- DROP FUNCTION newito.bo_find_user_by_username(varchar);
 
+-- DROP FUNCTION newito.bo_find_user_by_username(varchar);
+
 CREATE OR REPLACE FUNCTION newito.bo_find_user_by_username(in_username character varying)
  RETURNS character varying
  LANGUAGE plpgsql
@@ -43,14 +45,15 @@ declare
 	v_result varchar;
 begin
 	select count(0) into v_count
-	from newito.ito_m_user;
+	from newito.ito_m_user
+	where username = in_username;
 
 	if v_count = 1 then
 		select username, password, nama
 		into v_username, v_password, v_nama
 		from newito.ito_m_user
 		where username = in_username;
-	
+
 		v_callback := 1;
 		v_message := 'User berhasil ditemukan';
 		v_data := v_username || '#' || v_password || '#' || v_nama;
